@@ -37,6 +37,8 @@ function onChangeListener(event) {
     ensureStartBlock();
   }
   if (suppressChange) return;
+  // 忽略纯 UI 事件（选择、滚动、折叠等），它们不改变工程内容
+  if (event.isUiEvent) return;
   emit('change');
 }
 
@@ -106,11 +108,16 @@ function toJsonText() {
   return JSON.stringify(Blockly.serialization.workspaces.save(workspace), null, 2);
 }
 
+// 导出为 XML 文本（.m7f，兼容旧版）
+function toXmlText() {
+  return Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspace));
+}
+
 function getWorkspace() {
   return workspace;
 }
 
-defineExpose({ loadXml, loadJson, loadFromText, toJsonText, getWorkspace });
+defineExpose({ loadXml, loadJson, loadFromText, toJsonText, toXmlText, getWorkspace });
 </script>
 
 <template>

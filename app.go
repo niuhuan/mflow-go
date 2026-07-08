@@ -95,7 +95,8 @@ func (a *App) OpenProjectDialog() (string, error) {
 	return runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "打开工程",
 		Filters: []runtime.FileFilter{
-			{DisplayName: "mflow 工程 (*.m7p)", Pattern: "*.m7p"},
+			{DisplayName: "mflow 工程 (*.m7p, *.m7f)", Pattern: "*.m7p;*.m7f"},
+			{DisplayName: "所有文件 (*.*)", Pattern: "*.*"},
 		},
 	})
 }

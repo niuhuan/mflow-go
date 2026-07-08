@@ -10,6 +10,7 @@ import ProjectModal from './components/modals/ProjectModal.vue';
 import { useRunner } from './composables/useRunner';
 import { backend } from './api/backend';
 import { dialogs } from './composables/useDialogs';
+import { loadLastFile, saveLastFile } from './composables/useConfig';
 
 const workspaceRef = ref(null);
 const messages = ref([]);
@@ -17,6 +18,9 @@ const version = ref('');
 const newVersion = ref('');
 const filePath = ref('');
 const dirty = ref(false);
+
+// 最近一次已保存/已加载的工程内容快照，用于判断是否"脏"。
+let lastSavedText = '';
 
 const showTools = ref(false);
 const showSettings = ref(false);
@@ -31,25 +35,46 @@ function log(msg) {
 const getWorkspace = () => workspaceRef.value?.getWorkspace();
 const { running, run, interrupt } = useRunner(getWorkspace, log);
 
-function onChange() {
-  dirty.value = true;
+// 记录当前内容为"已保存"基线。
+function markSaved() {
+  try {
+    lastSavedText = workspaceRef.value.toJsonText();
+  } catch (_) {
+    lastSavedText = '';
+  }
+  dirty.value = false;
 }
 
-async function defaultProjectPath() {
-  const dir = await backend.appDataPath();
-  return dir + '/default.m7p';
+// 内容变化时通过与基线比较来判断是否真的被编辑过。
+function onChange() {
+  try {
+    dirty.value = workspaceRef.value.toJsonText() !== lastSavedText;
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+// 按扩展名选择序列化格式：.m7f 写 XML，其余（.m7p）写 JSON。
+function serializeFor(path) {
+  if (/\.m7f$/i.test(path || '')) {
+    return workspaceRef.value.toXmlText();
+  }
+  return workspaceRef.value.toJsonText();
 }
 
 async function save() {
   try {
     if (!filePath.value) {
+      // 首次保存（新建/模板工程）走"另存为"，默认 .m7p。
       const picked = await backend.saveProjectDialog();
       if (!picked) return false;
       filePath.value = picked;
     }
-    const text = workspaceRef.value.toJsonText();
-    await backend.writeTextFile(filePath.value, text);
+    await backend.writeTextFile(filePath.value, serializeFor(filePath.value));
+    // 脏检测基线始终使用 JSON，与 onChange 保持一致。
+    lastSavedText = workspaceRef.value.toJsonText();
     dirty.value = false;
+    await saveLastFile(filePath.value);
     log('已保存到: ' + filePath.value);
     return true;
   } catch (e) {
@@ -63,9 +88,10 @@ async function saveAs() {
     const picked = await backend.saveProjectDialog();
     if (!picked) return;
     filePath.value = picked;
-    const text = workspaceRef.value.toJsonText();
-    await backend.writeTextFile(picked, text);
+    await backend.writeTextFile(picked, serializeFor(picked));
+    lastSavedText = workspaceRef.value.toJsonText();
     dirty.value = false;
+    await saveLastFile(picked);
     log('已另存为: ' + picked);
   } catch (e) {
     log('另存失败: ' + e);
@@ -83,9 +109,19 @@ async function applyProject({ path, text }) {
     if (!ok) return;
   }
   workspaceRef.value.loadFromText(text);
-  filePath.value = path;
-  dirty.value = false;
-  log(path ? '已打开工程: ' + path : '已新建工程（请另存为以保存）');
+  if (path) {
+    // 打开已存在工程（.m7p 或 .m7f）：关联路径，保存时按扩展名写回对应格式
+    filePath.value = path;
+    markSaved();
+    await saveLastFile(path);
+    log('已打开工程: ' + path);
+  } else {
+    // 新建/模板工程：不关联任何路径，首次保存走另存为（默认 .m7p）
+    filePath.value = '';
+    markSaved();
+    await saveLastFile('');
+    log('已新建工程（首次保存将提示选择保存位置）');
+  }
 }
 
 onMounted(async () => {
@@ -96,23 +132,38 @@ onMounted(async () => {
 
   try {
     const autoRun = await backend.getAutoRunFile();
-    const target = autoRun || (await defaultProjectPath());
-    if (await backend.exists(target)) {
-      const text = await backend.readTextFile(target);
+    if (autoRun && (await backend.exists(autoRun))) {
+      const text = await backend.readTextFile(autoRun);
       workspaceRef.value.loadFromText(text);
-      filePath.value = target;
-      dirty.value = false;
-      log('已打开工程: ' + target);
-      if (autoRun) {
-        setTimeout(() => runAndSave(), 300);
-      }
+      filePath.value = autoRun;
+      markSaved();
+      await saveLastFile(autoRun);
+      log('已打开工程: ' + autoRun);
+      setTimeout(() => runAndSave(), 300);
+      return;
+    }
+
+    // 非首次：恢复上次打开的工程（若仍存在）。首次打开则保持空白工作区。
+    const last = await loadLastFile();
+    if (last && (await backend.exists(last))) {
+      const text = await backend.readTextFile(last);
+      workspaceRef.value.loadFromText(text);
+      filePath.value = last;
+      markSaved();
+      log('已恢复上次工程: ' + last);
+    } else {
+      // 空白工作区，未关联文件，且不标记为已编辑。
+      markSaved();
     }
   } catch (e) {
     log('初始化失败: ' + e);
+    markSaved();
   }
 });
 
 function onReady() {
+  // 工作区就绪时以当前（空白）内容作为基线，避免误判为已编辑。
+  markSaved();
   log('工作空间就绪。');
 }
 </script>
