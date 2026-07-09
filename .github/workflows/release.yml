@@ -1,0 +1,86 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Generate version tag
+      id: version
+      shell: pwsh
+      run: |
+        $version = (Get-Content "version.txt" -Raw).Trim()
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+
+        # 同步 wails.json 中的 productVersion
+        $wails = Get-Content "wails.json" -Raw | ConvertFrom-Json
+        $wails.info.productVersion = $version
+        $wails | ConvertTo-Json -Depth 10 | Set-Content "wails.json"
+
+        echo "Building version: $version"
+
+    - name: Check if release exists
+      id: check-release
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: '${{ steps.version.outputs.version }}'
+            });
+            const hasAsset = release.data.assets.some(a => a.name === 'mflow-go.exe');
+            core.setOutput('release_exists', 'true');
+            core.setOutput('has_asset', hasAsset.toString());
+          } catch (error) {
+            core.setOutput('release_exists', 'false');
+            core.setOutput('has_asset', 'false');
+          }
+
+    - name: Setup Go
+      if: steps.check-release.outputs.has_asset != 'true'
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.25'
+        cache: true
+
+    - name: Setup Node.js
+      if: steps.check-release.outputs.has_asset != 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Install Wails
+      if: steps.check-release.outputs.has_asset != 'true'
+      run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+    - name: Install frontend dependencies
+      if: steps.check-release.outputs.has_asset != 'true'
+      working-directory: frontend
+      run: npm install
+
+    - name: Build application
+      if: steps.check-release.outputs.has_asset != 'true'
+      run: wails build -platform windows/amd64 -ldflags "-X mflow-go/internal/version.Current=${{ steps.version.outputs.version }} -X mflow-go/internal/version.Repo=${{ github.repository }}"
+
+    - name: Create Release
+      if: steps.check-release.outputs.has_asset != 'true'
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        name: Release ${{ steps.version.outputs.version }}
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+        files: build/bin/mflow-go.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -6,6 +6,8 @@ export namespace config {
 	    zzzod_path: string;
 	    genshin_auto_login_path: string;
 	    ok_ww_path: string;
+	    stop_on_script_error: boolean;
+	    stop_on_account_error: boolean;
 	    full_run_timeout_minutes: number;
 	    daily_mission_timeout_minutes: number;
 	    refresh_stamina_timeout_minutes: number;
@@ -27,6 +29,8 @@ export namespace config {
 	        this.zzzod_path = source["zzzod_path"];
 	        this.genshin_auto_login_path = source["genshin_auto_login_path"];
 	        this.ok_ww_path = source["ok_ww_path"];
+	        this.stop_on_script_error = source["stop_on_script_error"];
+	        this.stop_on_account_error = source["stop_on_account_error"];
 	        this.full_run_timeout_minutes = source["full_run_timeout_minutes"];
 	        this.daily_mission_timeout_minutes = source["daily_mission_timeout_minutes"];
 	        this.refresh_stamina_timeout_minutes = source["refresh_stamina_timeout_minutes"];

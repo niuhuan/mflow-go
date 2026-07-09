@@ -29,14 +29,25 @@ func SetupEncodingEnv(cmd *exec.Cmd) {
 	)
 }
 
-// Taskkill 按镜像名强制结束进程。
-func Taskkill(exe string) error {
-	return exec.Command("taskkill", "/f", "/im", exe).Run()
+// ignoreNoProcess 将 taskkill "进程不存在"（退出码 128）视为成功。
+func ignoreNoProcess(err error) error {
+	if err == nil {
+		return nil
+	}
+	if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 128 {
+		return nil
+	}
+	return err
 }
 
-// KillTree 按 PID 强制结束进程及其整个进程树。
+// Taskkill 按镜像名强制结束进程。进程不存在（已关闭）不视为错误。
+func Taskkill(exe string) error {
+	return ignoreNoProcess(exec.Command("taskkill", "/f", "/im", exe).Run())
+}
+
+// KillTree 按 PID 强制结束进程及其整个进程树。进程不存在不视为错误。
 func KillTree(pid int) error {
-	return exec.Command("taskkill", "/f", "/t", "/pid", fmt.Sprintf("%d", pid)).Run()
+	return ignoreNoProcess(exec.Command("taskkill", "/f", "/t", "/pid", fmt.Sprintf("%d", pid)).Run())
 }
 
 // TaskExists 检查指定镜像名的进程是否存在。

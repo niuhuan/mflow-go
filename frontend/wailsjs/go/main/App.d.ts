@@ -98,6 +98,8 @@ export function SaveBackendConfig(arg1:config.BackendConfig):Promise<void>;
 
 export function SaveProjectDialog():Promise<string>;
 
+export function SetLogger(arg1:any):Promise<void>;
+
 export function SimulatedUniverse():Promise<void>;
 
 export function StartOkWwDaily():Promise<void>;

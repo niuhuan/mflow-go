@@ -61,6 +61,16 @@ async function save() {
         <input v-model="cfg[f.key]" class="input" placeholder="请输入文件夹路径" />
       </div>
 
+      <h4 class="section">错误处理</h4>
+      <label class="check">
+        <input type="checkbox" v-model="cfg.stop_on_script_error" />
+        运行脚本错误时停止流程
+      </label>
+      <label class="check">
+        <input type="checkbox" v-model="cfg.stop_on_account_error" />
+        备份或恢复账号错误时停止流程
+      </label>
+
       <h4 class="section">任务超时（分钟）</h4>
       <div class="grid">
         <div v-for="f in timeoutFields" :key="f.key" class="field small">
@@ -103,6 +113,15 @@ async function save() {
   border: 1px solid #cbd5e0;
   border-radius: 6px;
   font-size: 13px;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #2d3748;
+  cursor: pointer;
 }
 .grid {
   display: grid;

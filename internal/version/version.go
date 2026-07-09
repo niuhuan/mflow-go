@@ -14,8 +14,15 @@ import (
 // Current 当前版本号（构建时可通过 ldflags 覆盖）。
 var Current = "0.1.0"
 
-// repo 通过环境变量 GITHUB_REPOSITORY 指定，用于查询最新版本与打开发布页。
+// Repo 仓库名（owner/repo），构建期通过 ldflags 注入并打包进 exe，
+// 例如：-X mflow-go/internal/version.Repo=niuhuan/mflow-go
+var Repo = ""
+
+// repo 返回仓库名：优先使用编译期注入的 Repo，其次回退到环境变量（便于开发调试）。
 func repo() string {
+	if Repo != "" {
+		return Repo
+	}
 	return os.Getenv("GITHUB_REPOSITORY")
 }
 

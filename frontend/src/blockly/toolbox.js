@@ -18,7 +18,6 @@ export const toolboxXml = `
       <block type="simulated_universe"></block>
       <block type="farming"></block>
       <block type="close_game"></block>
-      <block type="clear_hsr_reg"></block>
     </category>
     <category name="原神" colour="40">
       <block type="run_better_gi"></block>
@@ -48,7 +47,6 @@ export const toolboxXml = `
           <shadow type="text"><field name="TEXT">account1</field></shadow>
         </value>
       </block>
-      <block type="clear_gi_reg"></block>
     </category>
     <category name="ZZZ" colour="10">
       <block type="run_zzzod"></block>
@@ -63,13 +61,11 @@ export const toolboxXml = `
           <shadow type="text"><field name="TEXT">默认账号</field></shadow>
         </value>
       </block>
-      <block type="clear_zzz_reg"></block>
     </category>
     <category name="鸣潮" colour="55">
       <block type="start_ok_ww_daily"></block>
       <block type="start_ok_ww_weekly"></block>
       <block type="kill_ok_ww"></block>
-      <block type="clear_ww_reg"></block>
     </category>
     <category name="通用" colour="80">
       <block type="wait_seconds">

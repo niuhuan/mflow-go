@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import Toolbar from './components/Toolbar.vue';
 import BlocklyWorkspace from './components/BlocklyWorkspace.vue';
 import ConsolePanel from './components/ConsolePanel.vue';
@@ -10,7 +10,16 @@ import ProjectModal from './components/modals/ProjectModal.vue';
 import { useRunner } from './composables/useRunner';
 import { backend } from './api/backend';
 import { dialogs } from './composables/useDialogs';
-import { loadLastFile, saveLastFile } from './composables/useConfig';
+import {
+  loadLastFile,
+  saveLastFile,
+  loadConsolePosition,
+  saveConsolePosition,
+  loadConsoleSize,
+  saveConsoleWidth,
+  saveConsoleHeight,
+} from './composables/useConfig';
+import { EventsOn } from '../wailsjs/runtime/runtime';
 
 const workspaceRef = ref(null);
 const messages = ref([]);
@@ -18,6 +27,54 @@ const version = ref('');
 const newVersion = ref('');
 const filePath = ref('');
 const dirty = ref(false);
+const consolePosition = ref('right'); // 'right' | 'bottom'
+const consoleWidth = ref(380);
+const consoleHeight = ref(180);
+
+// 控制台面板的尺寸样式：右侧控制宽度，下方控制高度。
+const consoleStyle = computed(() =>
+  consolePosition.value === 'right'
+    ? { flexBasis: consoleWidth.value + 'px' }
+    : { flexBasis: consoleHeight.value + 'px' }
+);
+
+async function toggleConsolePosition() {
+  consolePosition.value = consolePosition.value === 'right' ? 'bottom' : 'right';
+  await saveConsolePosition(consolePosition.value);
+}
+
+// ---------- 控制台拖拽调整尺寸 ----------
+let dragStart = 0;
+let dragStartSize = 0;
+
+function onDragMove(e) {
+  if (consolePosition.value === 'right') {
+    const w = dragStartSize - (e.clientX - dragStart);
+    consoleWidth.value = Math.max(120, Math.min(w, window.innerWidth - 200));
+  } else {
+    const h = dragStartSize - (e.clientY - dragStart);
+    consoleHeight.value = Math.max(80, Math.min(h, window.innerHeight - 160));
+  }
+}
+
+async function onDragEnd() {
+  window.removeEventListener('mousemove', onDragMove);
+  window.removeEventListener('mouseup', onDragEnd);
+  document.body.style.userSelect = '';
+  if (consolePosition.value === 'right') {
+    await saveConsoleWidth(consoleWidth.value);
+  } else {
+    await saveConsoleHeight(consoleHeight.value);
+  }
+}
+
+function startDrag(e) {
+  dragStart = consolePosition.value === 'right' ? e.clientX : e.clientY;
+  dragStartSize = consolePosition.value === 'right' ? consoleWidth.value : consoleHeight.value;
+  document.body.style.userSelect = 'none';
+  window.addEventListener('mousemove', onDragMove);
+  window.addEventListener('mouseup', onDragEnd);
+}
 
 // 最近一次已保存/已加载的工程内容快照，用于判断是否"脏"。
 let lastSavedText = '';
@@ -124,7 +181,28 @@ async function applyProject({ path, text }) {
   }
 }
 
+// 追加一行原始脚本输出（不加时间戳），并限制缓冲行数。
+function appendOutput(line) {
+  if (line == null) return;
+  messages.value.push(String(line));
+  if (messages.value.length > 500) messages.value.shift();
+}
+
+let unsubscribeOutput = null;
+
 onMounted(async () => {
+  // 监听后端转发的子进程输出。
+  unsubscribeOutput = EventsOn('console:output', appendOutput);
+  log('控制台就绪，脚本输出将显示在这里。');
+
+  try {
+    consolePosition.value = await loadConsolePosition();
+  } catch (_) { /* ignore */ }
+  try {
+    const size = await loadConsoleSize();
+    consoleWidth.value = size.width;
+    consoleHeight.value = size.height;
+  } catch (_) { /* ignore */ }
   try {
     version.value = await backend.getVersion();
   } catch (_) { /* ignore */ }
@@ -161,6 +239,10 @@ onMounted(async () => {
   }
 });
 
+onBeforeUnmount(() => {
+  if (typeof unsubscribeOutput === 'function') unsubscribeOutput();
+});
+
 function onReady() {
   // 工作区就绪时以当前（空白）内容作为基线，避免误判为已编辑。
   markSaved();
@@ -184,12 +266,21 @@ function onReady() {
       @open-project="showProject = true"
       @open-release="backend.openReleasePage()"
     />
-    <div class="body">
+    <div class="body" :class="consolePosition === 'right' ? 'body--right' : 'body--bottom'">
       <div class="editor">
         <BlocklyWorkspace ref="workspaceRef" @change="onChange" @ready="onReady" />
       </div>
-      <div class="console-wrap">
-        <ConsolePanel :messages="messages" />
+      <div
+        class="splitter"
+        :class="consolePosition === 'right' ? 'splitter--v' : 'splitter--h'"
+        @mousedown="startDrag"
+      ></div>
+      <div class="console-wrap" :style="consoleStyle">
+        <ConsolePanel
+          :messages="messages"
+          :position="consolePosition"
+          @toggle-position="toggleConsolePosition"
+        />
       </div>
     </div>
 
@@ -215,16 +306,44 @@ function onReady() {
 .body {
   flex: 1 1 auto;
   display: flex;
-  flex-direction: column;
   min-height: 0;
+  min-width: 0;
+}
+.body--bottom {
+  flex-direction: column;
+}
+.body--right {
+  flex-direction: row;
 }
 .editor {
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
   position: relative;
 }
 .console-wrap {
-  flex: 0 0 160px;
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+.body--bottom .console-wrap {
   border-top: 1px solid #333;
+}
+.body--right .console-wrap {
+  border-left: 1px solid #333;
+}
+.splitter {
+  flex: 0 0 auto;
+  background: #2b2b2b;
+}
+.splitter:hover {
+  background: #4a90d9;
+}
+.splitter--v {
+  width: 5px;
+  cursor: col-resize;
+}
+.splitter--h {
+  height: 5px;
+  cursor: row-resize;
 }
 </style>

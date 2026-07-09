@@ -22,7 +22,7 @@ const emit = defineEmits([
   <div class="toolbar">
     <div class="left">
       <button class="btn primary" :disabled="running" @click="emit('run')">
-        {{ running ? '运行中...' : '运行' }}
+        {{ running ? '运行中...' : '保存并运行' }}
       </button>
       <button class="btn danger" :disabled="!running" @click="emit('interrupt')">中断</button>
       <button class="btn" :disabled="running" @click="emit('save')">保存</button>

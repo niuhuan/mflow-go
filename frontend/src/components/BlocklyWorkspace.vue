@@ -18,6 +18,7 @@ const blocklyDiv = ref(null);
 // 保存原始 Blockly 实例，避免被 Vue 响应式代理包裹
 let workspace = null;
 let suppressChange = false;
+let resizeObserver = null;
 
 function ensureStartBlock() {
   const starts = workspace.getBlocksByType('start_flow', false);
@@ -57,10 +58,21 @@ onMounted(() => {
 
   loadXml(emptyXml);
   workspace.addChangeListener(onChangeListener);
+
+  // 容器尺寸变化（如切换控制台位置）时让 Blockly 重新布局
+  resizeObserver = new ResizeObserver(() => {
+    if (workspace) Blockly.svgResize(workspace);
+  });
+  resizeObserver.observe(blocklyDiv.value);
+
   emit('ready');
 });
 
 onBeforeUnmount(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
   if (workspace) {
     workspace.dispose();
     workspace = null;

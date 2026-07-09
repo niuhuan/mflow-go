@@ -55,6 +55,24 @@ async function importAccount(kind) {
     await dialogs.alert(String(e));
   }
 }
+
+const clearRegItems = [
+  { label: '清除星铁注册表', name: '星铁', fn: () => backend.clearHsrReg() },
+  { label: '清除原神注册表', name: '原神', fn: () => backend.clearGiReg() },
+  { label: '清除绝区零注册表', name: '绝区零', fn: () => backend.clearZzzReg() },
+  { label: '清除鸣潮注册表', name: '鸣潮', fn: () => backend.clearWwReg() },
+];
+
+async function clearReg(item) {
+  const ok = await dialogs.confirm(`确定清除${item.name}游戏注册表？此操作不可撤销。`);
+  if (!ok) return;
+  try {
+    await item.fn();
+    await dialogs.alert(`清除${item.name}注册表成功`);
+  } catch (e) {
+    await dialogs.alert(String(e));
+  }
+}
 </script>
 
 <template>
@@ -78,6 +96,13 @@ async function importAccount(kind) {
       <button class="tool-btn" @click="importAccount('hsr')">导入星铁账号</button>
       <button class="tool-btn" @click="importAccount('gi')">导入原神账号</button>
       <button class="tool-btn" @click="importAccount('zzz')">导入绝区零账号</button>
+    </div>
+
+    <h4 class="section">清除注册表</h4>
+    <div class="row">
+      <button v-for="item in clearRegItems" :key="item.label" class="tool-btn danger" @click="clearReg(item)">
+        {{ item.label }}
+      </button>
     </div>
   </BaseModal>
 </template>
@@ -109,5 +134,10 @@ async function importAccount(kind) {
 .tool-btn:hover {
   background: #fffaf0;
   border-color: #dd6b20;
+}
+.tool-btn.danger:hover {
+  background: #fff5f5;
+  border-color: #c53030;
+  color: #c53030;
 }
 </style>

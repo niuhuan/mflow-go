@@ -31,6 +31,10 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	// 将子进程输出转发到前端控制台。
+	a.Runner.SetLogger(func(line string) {
+		runtime.EventsEmit(ctx, "console:output", line)
+	})
 }
 
 // ---------- 版本 ----------

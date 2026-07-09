@@ -194,6 +194,10 @@ export function SaveProjectDialog() {
   return window['go']['main']['App']['SaveProjectDialog']();
 }
 
+export function SetLogger(arg1) {
+  return window['go']['main']['App']['SetLogger'](arg1);
+}
+
 export function SimulatedUniverse() {
   return window['go']['main']['App']['SimulatedUniverse']();
 }

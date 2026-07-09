@@ -14,6 +14,10 @@ type BackendConfig struct {
 	GenshinAutoLoginPath string `json:"genshin_auto_login_path"`
 	OkWwPath            string `json:"ok_ww_path"`
 
+	// 错误处理策略
+	StopOnScriptError  bool `json:"stop_on_script_error"`  // 运行脚本错误时停止流程（默认关）
+	StopOnAccountError bool `json:"stop_on_account_error"` // 备份/恢复账号错误时停止流程（默认开）
+
 	FullRunTimeoutMinutes           uint64 `json:"full_run_timeout_minutes"`
 	DailyMissionTimeoutMinutes      uint64 `json:"daily_mission_timeout_minutes"`
 	RefreshStaminaTimeoutMinutes    uint64 `json:"refresh_stamina_timeout_minutes"`
@@ -28,6 +32,8 @@ type BackendConfig struct {
 // Default 返回带默认超时的配置。
 func Default() BackendConfig {
 	return BackendConfig{
+		StopOnScriptError:               false,
+		StopOnAccountError:              true,
 		FullRunTimeoutMinutes:           60,
 		DailyMissionTimeoutMinutes:      60,
 		RefreshStaminaTimeoutMinutes:    60,
