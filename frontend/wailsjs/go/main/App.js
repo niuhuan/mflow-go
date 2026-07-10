@@ -42,6 +42,10 @@ export function EndRun() {
   return window['go']['main']['App']['EndRun']();
 }
 
+export function EndRunSession() {
+  return window['go']['main']['App']['EndRunSession']();
+}
+
 export function Exists(arg1) {
   return window['go']['main']['App']['Exists'](arg1);
 }
@@ -212,6 +216,10 @@ export function StartOkWwWeekly() {
 
 export function StartRun() {
   return window['go']['main']['App']['StartRun']();
+}
+
+export function StartRunSession(arg1) {
+  return window['go']['main']['App']['StartRunSession'](arg1);
 }
 
 export function WriteTextFile(arg1, arg2) {

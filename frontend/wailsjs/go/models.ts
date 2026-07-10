@@ -6,6 +6,9 @@ export namespace config {
 	    zzzod_path: string;
 	    genshin_auto_login_path: string;
 	    ok_ww_path: string;
+	    keep_console_window: boolean;
+	    script_log_to_stdout: boolean;
+	    script_log_to_app_console: boolean;
 	    stop_on_script_error: boolean;
 	    stop_on_account_error: boolean;
 	    full_run_timeout_minutes: number;
@@ -29,6 +32,9 @@ export namespace config {
 	        this.zzzod_path = source["zzzod_path"];
 	        this.genshin_auto_login_path = source["genshin_auto_login_path"];
 	        this.ok_ww_path = source["ok_ww_path"];
+	        this.keep_console_window = source["keep_console_window"];
+	        this.script_log_to_stdout = source["script_log_to_stdout"];
+	        this.script_log_to_app_console = source["script_log_to_app_console"];
 	        this.stop_on_script_error = source["stop_on_script_error"];
 	        this.stop_on_account_error = source["stop_on_account_error"];
 	        this.full_run_timeout_minutes = source["full_run_timeout_minutes"];

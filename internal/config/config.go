@@ -13,6 +13,9 @@ type BackendConfig struct {
 	ZzzodPath           string `json:"zzzod_path"`
 	GenshinAutoLoginPath string `json:"genshin_auto_login_path"`
 	OkWwPath            string `json:"ok_ww_path"`
+	KeepConsoleWindow   bool   `json:"keep_console_window"`
+	ScriptLogToStdout   bool   `json:"script_log_to_stdout"`
+	ScriptLogToAppConsole bool `json:"script_log_to_app_console"`
 
 	// 错误处理策略
 	StopOnScriptError  bool `json:"stop_on_script_error"`  // 运行脚本错误时停止流程（默认关）
@@ -32,6 +35,9 @@ type BackendConfig struct {
 // Default 返回带默认超时的配置。
 func Default() BackendConfig {
 	return BackendConfig{
+		KeepConsoleWindow:               true,
+		ScriptLogToStdout:               true,
+		ScriptLogToAppConsole:           false,
 		StopOnScriptError:               false,
 		StopOnAccountError:              true,
 		FullRunTimeoutMinutes:           60,

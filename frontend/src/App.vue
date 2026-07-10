@@ -156,7 +156,8 @@ async function saveAs() {
 }
 
 async function runAndSave() {
-  await save();
+  const ok = await save();
+  if (!ok) return;
   await run();
 }
 
@@ -193,7 +194,7 @@ let unsubscribeOutput = null;
 onMounted(async () => {
   // 监听后端转发的子进程输出。
   unsubscribeOutput = EventsOn('console:output', appendOutput);
-  log('控制台就绪，脚本输出将显示在这里。');
+  log('应用控制台就绪。');
 
   try {
     consolePosition.value = await loadConsolePosition();

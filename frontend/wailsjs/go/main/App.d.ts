@@ -22,6 +22,8 @@ export function DailyMission():Promise<void>;
 
 export function EndRun():Promise<void>;
 
+export function EndRunSession():Promise<void>;
+
 export function Exists(arg1:string):Promise<boolean>;
 
 export function ExportAccount(arg1:string,arg2:string,arg3:string):Promise<void>;
@@ -107,5 +109,7 @@ export function StartOkWwDaily():Promise<void>;
 export function StartOkWwWeekly():Promise<void>;
 
 export function StartRun():Promise<void>;
+
+export function StartRunSession(arg1:config.BackendConfig):Promise<void>;
 
 export function WriteTextFile(arg1:string,arg2:string):Promise<void>;

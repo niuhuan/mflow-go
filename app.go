@@ -129,12 +129,16 @@ func (a *App) GetAutoRunFile() string {
 
 // StartRun 开始运行会话（供前端在执行流程前调用）。
 func (a *App) StartRun() {
-	a.pm.StartSession()
+	cfg, err := config.Load()
+	if err != nil {
+		cfg = config.Default()
+	}
+	a.Runner.StartRunSession(cfg)
 }
 
 // EndRun 结束运行会话（成功/失败/中断后调用）。
 func (a *App) EndRun() {
-	a.pm.EndSession()
+	a.Runner.EndRunSession()
 }
 
 // Interrupt 中断：结束本次会话登记的进程树与相关 exe。

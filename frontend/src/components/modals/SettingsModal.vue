@@ -71,6 +71,20 @@ async function save() {
         备份或恢复账号错误时停止流程
       </label>
 
+      <h4 class="section">启动与日志</h4>
+      <label class="check">
+        <input type="checkbox" v-model="cfg.keep_console_window" />
+        启动时保留黑窗口（重启生效）
+      </label>
+      <label class="check">
+        <input type="checkbox" v-model="cfg.script_log_to_stdout" />
+        将脚本日志打印到标准输出（重新运行生效）
+      </label>
+      <label class="check">
+        <input type="checkbox" v-model="cfg.script_log_to_app_console" />
+        将脚本日志打印到应用程序控制台（重新运行生效）
+      </label>
+
       <h4 class="section">任务超时（分钟）</h4>
       <div class="grid">
         <div v-for="f in timeoutFields" :key="f.key" class="field small">

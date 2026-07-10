@@ -30,7 +30,7 @@ func (r *Runner) runM7fCommand(command string, timeoutMinutes uint64) error {
 	r.pm.RegisterExe(hsrBin)
 	r.pm.RegisterExe(hsrGameExe)
 
-	cmd := exec.Command("cmd", "/c", hsrBin, command)
+	cmd := exec.Command(filepath.Join(cfg.M7Path, hsrBin), command)
 	cmd.Dir = cfg.M7Path
 	sysutil.SetupEncodingEnv(cmd)
 	stdin, _ := cmd.StdinPipe()
@@ -90,7 +90,7 @@ func (r *Runner) RunM7Launcher() error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("cmd", "/c", hsrLauncher)
+	cmd := exec.Command(filepath.Join(cfg.M7Path, hsrLauncher))
 	cmd.Dir = cfg.M7Path
 	sysutil.SetupEncodingEnv(cmd)
 	return cmd.Start()

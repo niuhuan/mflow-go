@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
+	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -21,11 +24,13 @@ type Runner struct {
 	logMu  sync.RWMutex
 	logger func(string)
 	outMu  sync.Mutex // 串行化写入本进程控制台，避免多流交错
+	cfgMu  sync.RWMutex
+	runCfg config.BackendConfig
 }
 
 // NewRunner 创建 Runner。
 func NewRunner(pm *procs.Manager) *Runner {
-	return &Runner{pm: pm}
+	return &Runner{pm: pm, runCfg: config.Default()}
 }
 
 func (r *Runner) ctx() context.Context {
@@ -46,6 +51,43 @@ func (r *Runner) emit(line string) {
 	if fn != nil {
 		fn(line)
 	}
+}
+
+// StartRunSession 为一次运行记录配置快照，供该轮后续子进程统一使用。
+func (r *Runner) StartRunSession(cfg config.BackendConfig) {
+	r.cfgMu.Lock()
+	r.runCfg = cfg
+	r.cfgMu.Unlock()
+	r.pm.StartSession()
+}
+
+// EndRunSession 结束当前运行会话。
+func (r *Runner) EndRunSession() {
+	r.pm.EndSession()
+}
+
+func (r *Runner) currentRunConfig() config.BackendConfig {
+	r.cfgMu.RLock()
+	cfg := r.runCfg
+	r.cfgMu.RUnlock()
+	return cfg
+}
+
+func (r *Runner) applyWindowPolicy(cmd *exec.Cmd) {
+	if r.currentRunConfig().KeepConsoleWindow {
+		return
+	}
+	base := strings.ToLower(filepath.Base(cmd.Path))
+	switch base {
+	case "cmd", "cmd.exe", "march7th assistant.exe", "march7th launcher.exe":
+	default:
+		return
+	}
+	if cmd.SysProcAttr == nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{}
+	}
+	cmd.SysProcAttr.HideWindow = true
+	cmd.SysProcAttr.CreationFlags |= 0x08000000 // CREATE_NO_WINDOW
 }
 
 // lineWriter 将子进程输出按行拆分、统一解码为 UTF-8 后交给 sink 处理。
@@ -92,11 +134,16 @@ func (r *Runner) writeConsole(s string) {
 	r.outMu.Unlock()
 }
 
-// newWriter 返回一个把子进程输出（解码为 UTF-8）同时写到本进程控制台与前端页面控制台的 writer。
+// newWriter 返回一个按本轮运行配置分发子进程输出的 writer。
 func (r *Runner) newWriter() *lineWriter {
 	return &lineWriter{sink: func(s string) {
-		r.writeConsole(s)
-		r.emit(s)
+		cfg := r.currentRunConfig()
+		if cfg.ScriptLogToStdout {
+			r.writeConsole(s)
+		}
+		if cfg.ScriptLogToAppConsole {
+			r.emit(s)
+		}
 	}}
 }
 
@@ -116,6 +163,7 @@ func (r *Runner) attachOutput(cmd *exec.Cmd) {
 
 // startCmd 启动进程并登记 PID 到当前会话，转发其输出。
 func (r *Runner) startCmd(cmd *exec.Cmd) error {
+	r.applyWindowPolicy(cmd)
 	r.attachOutput(cmd)
 	if err := cmd.Start(); err != nil {
 		return err
@@ -129,6 +177,7 @@ func (r *Runner) startCmd(cmd *exec.Cmd) error {
 // startBackground 后台启动进程：接好输出流后立即返回（不阻塞），并把 PID 登记为后台进程，
 // 运行结束或中断时统一杀掉。用于「后台运行命令」。
 func (r *Runner) startBackground(cmd *exec.Cmd) error {
+	r.applyWindowPolicy(cmd)
 	r.attachOutput(cmd)
 	if err := cmd.Start(); err != nil {
 		return err

@@ -25,7 +25,7 @@ const emit = defineEmits([
         {{ running ? '运行中...' : '保存并运行' }}
       </button>
       <button class="btn danger" :disabled="!running" @click="emit('interrupt')">中断</button>
-      <button class="btn" :disabled="running" @click="emit('save')">保存</button>
+      <button class="btn" @click="emit('save')">保存（重新运行生效）</button>
       <span v-if="dirty" class="dirty">*</span>
     </div>
 
@@ -36,7 +36,7 @@ const emit = defineEmits([
     <div class="right">
       <button class="btn" @click="emit('open-project')">工程</button>
       <button class="btn" :disabled="running" @click="emit('open-tools')">工具</button>
-      <button class="btn" :disabled="running" @click="emit('open-settings')">设置</button>
+      <button class="btn" @click="emit('open-settings')">设置</button>
       <span class="version" @click="emit('open-release')">
         <span v-if="newVersion" class="update-badge">有新版本</span>
         v{{ version }}
