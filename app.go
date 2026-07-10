@@ -10,6 +10,7 @@ import (
 	"mflow-go/internal/config"
 	"mflow-go/internal/games"
 	"mflow-go/internal/procs"
+	"mflow-go/internal/sysutil"
 	"mflow-go/internal/version"
 )
 
@@ -31,6 +32,8 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	// 将控制台代码页设为 UTF-8，使我们与子进程的 UTF-8 输出不乱码。
+	sysutil.SetConsoleUTF8()
 	// 将子进程输出转发到前端控制台。
 	a.Runner.SetLogger(func(line string) {
 		runtime.EventsEmit(ctx, "console:output", line)

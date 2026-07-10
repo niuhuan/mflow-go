@@ -58,6 +58,8 @@ watch(
   flex-direction: column;
   height: 100%;
   width: 100%;
+  min-height: 0;
+  min-width: 0;
   background: #1e1e1e;
 }
 .console-header {
@@ -90,7 +92,10 @@ watch(
 }
 .console {
   flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   color: #d4d4d4;
   font-family: 'Cascadia Code', 'Consolas', monospace;
   font-size: 12px;
@@ -102,5 +107,6 @@ watch(
   margin: 0 0 2px;
   white-space: pre-wrap;
   word-break: break-all;
+  overflow-wrap: anywhere;
 }
 </style>

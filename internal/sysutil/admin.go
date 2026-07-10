@@ -20,7 +20,8 @@ func IsElevated() bool {
 }
 
 // RunAsAdmin 以管理员权限重新启动自身，并在一个控制台窗口中运行以便查看日志：
-// 优先使用 Windows Terminal (wt.exe)，否则回退到 cmd.exe，均以 `cmd /s /k` 保留窗口。
+// 优先使用 Windows Terminal (wt.exe)，否则回退到 cmd.exe，均以 `cmd /s /c` 运行，
+// 这样控制台会在 GUI 进程退出后自动关闭，不会遗留空窗口。
 func RunAsAdmin() error {
 	exe, err := os.Executable()
 	if err != nil {
@@ -32,8 +33,9 @@ func RunAsAdmin() error {
 	if extra := strings.Join(os.Args[1:], " "); extra != "" {
 		inner += " " + extra
 	}
-	// `cmd /s /k "<inner>"`：/k 保留窗口以便查看脚本输出；/s 保证外层引号被正确剥离。
-	cmdArgs := `/s /k "` + inner + `"`
+	// `cmd /s /c "<inner>"`：cmd 会等待该命令完成后退出，
+	// 因此管理员实例运行期间控制台仍可用于显示日志，应用退出后窗口会自动关闭。
+	cmdArgs := `/s /c "` + inner + `"`
 
 	// 优先 wt.exe，失败（如执行别名无法提权）则回退到 cmd.exe。
 	if WhereWtExe() {

@@ -28,3 +28,14 @@ func AttachParentConsole() bool {
 	}
 	return true
 }
+
+// cpUTF8 是 UTF-8 代码页编号。
+const cpUTF8 = 65001
+
+// SetConsoleUTF8 将当前控制台的输入/输出代码页设为 UTF-8，
+// 使本程序及子进程的 UTF-8 输出在控制台中正确显示（不再乱码）。
+func SetConsoleUTF8() {
+	k32 := windows.NewLazySystemDLL("kernel32.dll")
+	_, _, _ = k32.NewProc("SetConsoleOutputCP").Call(uintptr(cpUTF8))
+	_, _, _ = k32.NewProc("SetConsoleCP").Call(uintptr(cpUTF8))
+}

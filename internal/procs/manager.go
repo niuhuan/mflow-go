@@ -12,6 +12,7 @@ type Manager struct {
 	mu      sync.Mutex
 	running bool
 	pids    map[int]struct{}
+	bgPids  map[int]struct{} // 后台进程 PID：运行结束(EndSession)或中断时都会被杀掉
 	exes    map[string]struct{}
 	ctx     context.Context
 	cancel  context.CancelFunc
@@ -20,8 +21,9 @@ type Manager struct {
 // New 创建进程会话管理器。
 func New() *Manager {
 	return &Manager{
-		pids: make(map[int]struct{}),
-		exes: make(map[string]struct{}),
+		pids:   make(map[int]struct{}),
+		bgPids: make(map[int]struct{}),
+		exes:   make(map[string]struct{}),
 	}
 }
 
@@ -33,6 +35,7 @@ func (m *Manager) StartSession() context.Context {
 		m.cancel()
 	}
 	m.pids = make(map[int]struct{})
+	m.bgPids = make(map[int]struct{})
 	m.exes = make(map[string]struct{})
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 	m.running = true
@@ -66,6 +69,16 @@ func (m *Manager) RegisterPID(pid int) {
 	m.pids[pid] = struct{}{}
 }
 
+// RegisterBackgroundPID 登记后台进程 PID（运行结束或中断时都会被杀掉）。
+func (m *Manager) RegisterBackgroundPID(pid int) {
+	if pid <= 0 {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.bgPids[pid] = struct{}{}
+}
+
 // RegisterExe 登记需在中断时兜底 taskkill 的镜像名。
 func (m *Manager) RegisterExe(exe string) {
 	if exe == "" {
@@ -76,22 +89,34 @@ func (m *Manager) RegisterExe(exe string) {
 	m.exes[exe] = struct{}{}
 }
 
-// EndSession 结束会话（成功/失败均调用），取消 context。
+// EndSession 结束会话（成功/失败均调用），取消 context，并杀掉遗留的后台进程。
 func (m *Manager) EndSession() {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	bgPids := make([]int, 0, len(m.bgPids))
+	for pid := range m.bgPids {
+		bgPids = append(bgPids, pid)
+	}
+	m.bgPids = make(map[int]struct{})
 	m.running = false
 	if m.cancel != nil {
 		m.cancel()
 		m.cancel = nil
 	}
+	m.mu.Unlock()
+
+	for _, pid := range bgPids {
+		_ = sysutil.KillTree(pid)
+	}
 }
 
-// Interrupt 中断：取消 context，杀死所有登记进程树 + 兜底 exe。
+// Interrupt 中断：取消 context，杀死所有登记进程树（含后台进程）+ 兜底 exe。
 func (m *Manager) Interrupt() {
 	m.mu.Lock()
-	pids := make([]int, 0, len(m.pids))
+	pids := make([]int, 0, len(m.pids)+len(m.bgPids))
 	for pid := range m.pids {
+		pids = append(pids, pid)
+	}
+	for pid := range m.bgPids {
 		pids = append(pids, pid)
 	}
 	exes := make([]string, 0, len(m.exes))
@@ -101,6 +126,7 @@ func (m *Manager) Interrupt() {
 	if m.cancel != nil {
 		m.cancel()
 	}
+	m.bgPids = make(map[int]struct{})
 	m.running = false
 	m.mu.Unlock()
 

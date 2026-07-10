@@ -324,6 +324,10 @@ function onReady() {
 .console-wrap {
   flex-grow: 0;
   flex-shrink: 0;
+  /* min-height/width:auto 会被内容撑开；置 0 + overflow 隐藏可保证固定尺寸不撑破布局 */
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 .body--bottom .console-wrap {
   border-top: 1px solid #333;

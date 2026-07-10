@@ -20,13 +20,13 @@ func (r *Runner) RunCommand(command string) (string, error) {
 	return "", nil
 }
 
-// RunCommandBackground 新开窗口后台执行命令。
+// RunCommandBackground 后台执行命令：接好输出流后立即返回（不阻塞流程），
+// 进程 PID 被登记，运行结束或中断时会被杀掉。
 func (r *Runner) RunCommandBackground(command string) (string, error) {
-	cmd := exec.Command("cmd", "/c", "start", "", "cmd", "/c", command)
+	cmd := exec.Command("cmd", "/c", command)
 	sysutil.SetupEncodingEnv(cmd)
-	if err := r.startCmd(cmd); err != nil {
+	if err := r.startBackground(cmd); err != nil {
 		return "", fmt.Errorf("后台运行命令失败: %w", err)
 	}
-	_ = cmd.Wait()
 	return "", nil
 }
