@@ -40,6 +40,81 @@ func (a *App) startup(ctx context.Context) {
 	})
 }
 
+func (a *App) domReady(ctx context.Context) {
+	a.restoreWindowState()
+}
+
+func (a *App) beforeClose(ctx context.Context) bool {
+	a.saveWindowState()
+	return false
+}
+
+func (a *App) restoreWindowState() {
+	state, ok, err := config.LoadWindowState()
+	if err != nil || !ok {
+		return
+	}
+
+	bounds := sysutil.WindowBounds{
+		X:      state.X,
+		Y:      state.Y,
+		Width:  state.Width,
+		Height: state.Height,
+	}
+	bounds = sysutil.ClampWindowBounds(bounds, defaultWindowWidth, defaultWindowHeight)
+	if err := sysutil.SetMainWindowBounds(appTitle, bounds); err == nil {
+		if state.Fullscreen {
+			runtime.WindowFullscreen(a.ctx)
+		}
+		return
+	}
+
+	runtime.WindowSetSize(a.ctx, bounds.Width, bounds.Height)
+	runtime.WindowSetPosition(a.ctx, bounds.X, bounds.Y)
+	if state.Fullscreen {
+		runtime.WindowFullscreen(a.ctx)
+	}
+}
+
+func (a *App) saveWindowState() {
+	state, ok, err := config.LoadWindowState()
+	if err != nil {
+		state = config.DefaultWindowState()
+		ok = false
+	}
+
+	fullscreen := runtime.WindowIsFullscreen(a.ctx)
+	state.Fullscreen = fullscreen
+
+	if !fullscreen {
+		if bounds, err := sysutil.GetMainWindowBounds(appTitle); err == nil {
+			state.X = bounds.X
+			state.Y = bounds.Y
+			state.Width = bounds.Width
+			state.Height = bounds.Height
+		} else {
+			x, y := runtime.WindowGetPosition(a.ctx)
+			width, height := runtime.WindowGetSize(a.ctx)
+			state.X = x
+			state.Y = y
+			state.Width = width
+			state.Height = height
+		}
+	} else if !ok {
+		state = config.DefaultWindowState()
+		state.Fullscreen = true
+	}
+
+	if state.Width <= 0 {
+		state.Width = defaultWindowWidth
+	}
+	if state.Height <= 0 {
+		state.Height = defaultWindowHeight
+	}
+
+	_ = config.SaveWindowState(state)
+}
+
 // ---------- 版本 ----------
 
 func (a *App) GetVersion() string {

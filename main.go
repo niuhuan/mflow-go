@@ -9,6 +9,12 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
+const (
+	appTitle            = "mflow-go"
+	defaultWindowWidth  = 1200
+	defaultWindowHeight = 800
+)
+
 //go:embed all:frontend/dist
 var assets embed.FS
 
@@ -29,14 +35,16 @@ func main() {
 	app := NewApp()
 
 	err := wails.Run(&options.App{
-		Title:  "mflow-go",
-		Width:  1200,
-		Height: 800,
+		Title:  appTitle,
+		Width:  defaultWindowWidth,
+		Height: defaultWindowHeight,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 255, G: 255, B: 255, A: 1},
 		OnStartup:        app.startup,
+		OnDomReady:       app.domReady,
+		OnBeforeClose:    app.beforeClose,
 		Bind: []interface{}{
 			app,
 		},
