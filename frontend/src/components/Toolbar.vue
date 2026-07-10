@@ -35,7 +35,7 @@ const emit = defineEmits([
 
     <div class="right">
       <button class="btn" @click="emit('open-project')">工程</button>
-      <button class="btn" :disabled="running" @click="emit('open-tools')">工具</button>
+      <button class="btn" @click="emit('open-tools')">工具</button>
       <button class="btn" @click="emit('open-settings')">设置</button>
       <span class="version" @click="emit('open-release')">
         <span v-if="newVersion" class="update-badge">有新版本</span>
