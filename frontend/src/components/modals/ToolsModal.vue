@@ -1,7 +1,12 @@
 <script setup>
-import BaseModal from './BaseModal.vue';
+import PopupMenu from '../PopupMenu.vue';
 import { backend } from '../../api/backend';
 import { dialogs } from '../../composables/useDialogs';
+
+defineProps({
+  show: { type: Boolean, default: false },
+  anchor: { type: Object, default: null },
+});
 
 const emit = defineEmits(['close']);
 
@@ -80,68 +85,68 @@ async function clearReg(item) {
 </script>
 
 <template>
-  <BaseModal title="工具" width="480px" @close="emit('close')">
-    <h4 class="section">启动程序</h4>
-    <div class="row">
-      <button v-for="l in launchers" :key="l.label" class="tool-btn" @click="runLauncher(l)">
-        {{ l.label }}
-      </button>
-    </div>
+  <PopupMenu :show="show" :anchor="anchor" :min-width="240" @close="emit('close')">
+    <div class="menu-label">启动程序</div>
+    <button v-for="l in launchers" :key="l.label" class="menu-item" @click="runLauncher(l)">
+      {{ l.label }}
+    </button>
 
-    <h4 class="section">账号导出</h4>
-    <div class="row">
-      <button class="tool-btn" @click="exportAccount('hsr')">导出星铁账号</button>
-      <button class="tool-btn" @click="exportAccount('gi')">导出原神账号</button>
-      <button class="tool-btn" @click="exportAccount('zzz')">导出绝区零账号</button>
-    </div>
+    <div class="menu-divider" />
+    <div class="menu-label">账号导出</div>
+    <button class="menu-item" @click="exportAccount('hsr')">导出星铁账号</button>
+    <button class="menu-item" @click="exportAccount('gi')">导出原神账号</button>
+    <button class="menu-item" @click="exportAccount('zzz')">导出绝区零账号</button>
 
-    <h4 class="section">账号导入</h4>
-    <div class="row">
-      <button class="tool-btn" @click="importAccount('hsr')">导入星铁账号</button>
-      <button class="tool-btn" @click="importAccount('gi')">导入原神账号</button>
-      <button class="tool-btn" @click="importAccount('zzz')">导入绝区零账号</button>
-    </div>
+    <div class="menu-divider" />
+    <div class="menu-label">账号导入</div>
+    <button class="menu-item" @click="importAccount('hsr')">导入星铁账号</button>
+    <button class="menu-item" @click="importAccount('gi')">导入原神账号</button>
+    <button class="menu-item" @click="importAccount('zzz')">导入绝区零账号</button>
 
-    <h4 class="section">清除注册表</h4>
-    <div class="row">
-      <button v-for="item in clearRegItems" :key="item.label" class="tool-btn danger" @click="clearReg(item)">
-        {{ item.label }}
-      </button>
-    </div>
-  </BaseModal>
+    <div class="menu-divider" />
+    <div class="menu-label">清除注册表</div>
+    <button
+      v-for="item in clearRegItems"
+      :key="item.label"
+      class="menu-item danger"
+      @click="clearReg(item)"
+    >
+      {{ item.label }}
+    </button>
+  </PopupMenu>
 </template>
 
 <style scoped>
-.section {
-  margin: 4px 0 10px;
-  font-size: 13px;
-  color: #4a5568;
-  border-left: 3px solid #dd6b20;
-  padding-left: 8px;
+.menu-label {
+  padding: 6px 14px 4px;
+  font-size: 11px;
+  color: #a0aec0;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-.tool-btn {
-  flex: 1 1 auto;
-  min-width: 130px;
-  padding: 9px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  background: #fff;
+.menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
   cursor: pointer;
   font-size: 13px;
+  color: #2d3748;
+  white-space: nowrap;
 }
-.tool-btn:hover {
+.menu-item:hover {
   background: #fffaf0;
-  border-color: #dd6b20;
+  color: #c05621;
 }
-.tool-btn.danger:hover {
+.menu-item.danger:hover {
   background: #fff5f5;
-  border-color: #c53030;
   color: #c53030;
+}
+.menu-divider {
+  height: 1px;
+  background: #edf2f7;
+  margin: 4px 0;
 }
 </style>

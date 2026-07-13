@@ -4,9 +4,7 @@ import Toolbar from './components/Toolbar.vue';
 import BlocklyWorkspace from './components/BlocklyWorkspace.vue';
 import ConsolePanel from './components/ConsolePanel.vue';
 import DialogHost from './components/DialogHost.vue';
-import ToolsModal from './components/modals/ToolsModal.vue';
 import SettingsModal from './components/modals/SettingsModal.vue';
-import ProjectModal from './components/modals/ProjectModal.vue';
 import { useRunner } from './composables/useRunner';
 import { backend } from './api/backend';
 import { dialogs } from './composables/useDialogs';
@@ -79,9 +77,7 @@ function startDrag(e) {
 // 最近一次已保存/已加载的工程内容快照，用于判断是否"脏"。
 let lastSavedText = '';
 
-const showTools = ref(false);
 const showSettings = ref(false);
-const showProject = ref(false);
 
 function log(msg) {
   const time = new Date().toLocaleTimeString();
@@ -262,9 +258,9 @@ function onReady() {
       @run="runAndSave"
       @interrupt="interrupt"
       @save="save"
-      @open-tools="showTools = true"
       @open-settings="showSettings = true"
-      @open-project="showProject = true"
+      @apply-project="applyProject"
+      @save-as="saveAs"
       @open-release="backend.openReleasePage()"
     />
     <div class="body" :class="consolePosition === 'right' ? 'body--right' : 'body--bottom'">
@@ -285,14 +281,7 @@ function onReady() {
       </div>
     </div>
 
-    <ToolsModal v-if="showTools" @close="showTools = false" />
     <SettingsModal v-if="showSettings" @close="showSettings = false" />
-    <ProjectModal
-      v-if="showProject"
-      @close="showProject = false"
-      @apply="applyProject"
-      @save-as="saveAs"
-    />
     <DialogHost />
   </div>
 </template>

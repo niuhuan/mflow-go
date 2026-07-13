@@ -1,4 +1,8 @@
 <script setup>
+import { ref } from 'vue';
+import ProjectModal from './modals/ProjectModal.vue';
+import ToolsModal from './modals/ToolsModal.vue';
+
 defineProps({
   filePath: { type: String, default: '' },
   dirty: { type: Boolean, default: false },
@@ -11,11 +15,26 @@ const emit = defineEmits([
   'run',
   'interrupt',
   'save',
-  'open-tools',
   'open-settings',
-  'open-project',
   'open-release',
+  'apply-project',
+  'save-as',
 ]);
+
+const projectBtn = ref(null);
+const toolsBtn = ref(null);
+const showProject = ref(false);
+const showTools = ref(false);
+
+function toggleProject() {
+  showTools.value = false;
+  showProject.value = !showProject.value;
+}
+
+function toggleTools() {
+  showProject.value = false;
+  showTools.value = !showTools.value;
+}
 </script>
 
 <template>
@@ -34,14 +53,32 @@ const emit = defineEmits([
     </div>
 
     <div class="right">
-      <button class="btn" @click="emit('open-project')">工程</button>
-      <button class="btn" @click="emit('open-tools')">工具</button>
+      <button
+        ref="projectBtn"
+        class="btn"
+        :class="{ active: showProject }"
+        @click="toggleProject"
+      >
+        工程
+      </button>
+      <button ref="toolsBtn" class="btn" :class="{ active: showTools }" @click="toggleTools">
+        工具
+      </button>
       <button class="btn" @click="emit('open-settings')">设置</button>
       <span class="version" @click="emit('open-release')">
         <span v-if="newVersion" class="update-badge">有新版本</span>
         v{{ version }}
       </span>
     </div>
+
+    <ProjectModal
+      :show="showProject"
+      :anchor="projectBtn"
+      @close="showProject = false"
+      @apply="emit('apply-project', $event)"
+      @save-as="emit('save-as')"
+    />
+    <ToolsModal :show="showTools" :anchor="toolsBtn" @close="showTools = false" />
   </div>
 </template>
 
@@ -88,6 +125,10 @@ const emit = defineEmits([
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+.btn.active {
+  background: #4c5c78;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
 }
 .btn.primary {
   background: #2f855a;
