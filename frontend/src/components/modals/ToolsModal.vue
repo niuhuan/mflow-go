@@ -12,6 +12,7 @@ const launchers = [
 ];
 
 async function runLauncher(item) {
+  emit('close');
   try {
     await item.fn();
   } catch (e) {
@@ -20,6 +21,7 @@ async function runLauncher(item) {
 }
 
 async function exportAccount(kind) {
+  emit('close');
   const label = { hsr: '星铁', gi: '原神', zzz: '绝区零' }[kind];
   const name = await dialogs.prompt(`请输入${label}账号名称`);
   if (!name || !name.trim()) return;
@@ -34,6 +36,7 @@ async function exportAccount(kind) {
 }
 
 async function importAccount(kind) {
+  emit('close');
   const label = { hsr: '星铁', gi: '原神', zzz: '绝区零' }[kind];
   try {
     let list = [];
@@ -64,6 +67,7 @@ const clearRegItems = [
 ];
 
 async function clearReg(item) {
+  emit('close');
   const ok = await dialogs.confirm(`确定清除${item.name}游戏注册表？此操作不可撤销。`);
   if (!ok) return;
   try {
