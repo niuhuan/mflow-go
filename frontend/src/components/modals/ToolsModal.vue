@@ -1,4 +1,5 @@
 <script setup>
+import { nextTick } from 'vue';
 import PopupMenu from '../PopupMenu.vue';
 import { backend } from '../../api/backend';
 import { dialogs } from '../../composables/useDialogs';
@@ -16,8 +17,13 @@ const launchers = [
   { label: '启动绝区零一条龙 (GUI)', fn: () => backend.runZzzodGui() },
 ];
 
-async function runLauncher(item) {
+async function closeMenuAndWait() {
   emit('close');
+  await nextTick();
+}
+
+async function runLauncher(item) {
+  await closeMenuAndWait();
   try {
     await item.fn();
   } catch (e) {
@@ -26,22 +32,23 @@ async function runLauncher(item) {
 }
 
 async function exportAccount(kind) {
-  emit('close');
+  await closeMenuAndWait();
   const label = { hsr: '星铁', gi: '原神', zzz: '绝区零' }[kind];
   const name = await dialogs.prompt(`请输入${label}账号名称`);
   if (!name || !name.trim()) return;
+  const accountName = name.trim();
   try {
-    if (kind === 'hsr') await backend.exportAccount(name.trim(), '', '');
-    else if (kind === 'gi') await backend.exportGiAccount(name.trim());
-    else await backend.exportZzzAccount(name.trim());
-    await dialogs.alert(`导出${label}账号成功`);
+    if (kind === 'hsr') await backend.exportAccount(accountName, '', '');
+    else if (kind === 'gi') await backend.exportGiAccount(accountName);
+    else await backend.exportZzzAccount(accountName);
+    await dialogs.alert(`已成功导出${label}账号「${accountName}」`);
   } catch (e) {
-    await dialogs.alert(String(e));
+    await dialogs.alert(`导出${label}账号失败：${e}`);
   }
 }
 
 async function importAccount(kind) {
-  emit('close');
+  await closeMenuAndWait();
   const label = { hsr: '星铁', gi: '原神', zzz: '绝区零' }[kind];
   try {
     let list = [];
@@ -50,7 +57,7 @@ async function importAccount(kind) {
     else list = await backend.listZzzAccounts();
     list = list || [];
     if (list.length === 0) {
-      await dialogs.alert(`没有${label}账号`);
+      await dialogs.alert(`没有可导入的${label}账号`);
       return;
     }
     const name = await dialogs.select(list, `选择要导入的${label}账号`);
@@ -58,9 +65,9 @@ async function importAccount(kind) {
     if (kind === 'hsr') await backend.loadAccount(name);
     else if (kind === 'gi') await backend.importGiAccount(name);
     else await backend.importZzzAccount(name);
-    await dialogs.alert(`导入${label}账号成功`);
+    await dialogs.alert(`已成功导入${label}账号「${name}」`);
   } catch (e) {
-    await dialogs.alert(String(e));
+    await dialogs.alert(`导入${label}账号失败：${e}`);
   }
 }
 
@@ -72,7 +79,7 @@ const clearRegItems = [
 ];
 
 async function clearReg(item) {
-  emit('close');
+  await closeMenuAndWait();
   const ok = await dialogs.confirm(`确定清除${item.name}游戏注册表？此操作不可撤销。`);
   if (!ok) return;
   try {

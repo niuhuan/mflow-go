@@ -31,18 +31,44 @@ type monitorInfo struct {
 }
 
 var (
-	user32              = windows.NewLazySystemDLL("user32.dll")
-	procFindWindowW     = user32.NewProc("FindWindowW")
-	procGetWindowRect   = user32.NewProc("GetWindowRect")
-	procSetWindowPos    = user32.NewProc("SetWindowPos")
-	procMonitorFromRect = user32.NewProc("MonitorFromRect")
-	procGetMonitorInfoW = user32.NewProc("GetMonitorInfoW")
+	user32                  = windows.NewLazySystemDLL("user32.dll")
+	procFindWindowW         = user32.NewProc("FindWindowW")
+	procGetWindowRect       = user32.NewProc("GetWindowRect")
+	procSetWindowPos        = user32.NewProc("SetWindowPos")
+	procMonitorFromRect     = user32.NewProc("MonitorFromRect")
+	procGetMonitorInfoW     = user32.NewProc("GetMonitorInfoW")
+	procIsIconic            = user32.NewProc("IsIconic")
+	procGetWindowPlacement  = user32.NewProc("GetWindowPlacement")
 )
+
+type point struct {
+	X int32
+	Y int32
+}
+
+type windowPlacement struct {
+	Length           uint32
+	Flags            uint32
+	ShowCmd          uint32
+	PtMinPosition    point
+	PtMaxPosition    point
+	RcNormalPosition rect
+}
 
 const (
 	monitorDefaultToNearest = 2
 	swpNoZOrder             = 0x0004
 )
+
+// IsMainWindowMinimized 判断主窗口是否处于最小化状态。
+func IsMainWindowMinimized(title string) (bool, error) {
+	hwnd, err := findWindow(title)
+	if err != nil {
+		return false, err
+	}
+	ret, _, _ := procIsIconic.Call(uintptr(hwnd))
+	return ret != 0, nil
+}
 
 // GetMainWindowBounds 读取主窗口的绝对屏幕坐标与尺寸。
 func GetMainWindowBounds(title string) (WindowBounds, error) {
@@ -50,17 +76,48 @@ func GetMainWindowBounds(title string) (WindowBounds, error) {
 	if err != nil {
 		return WindowBounds{}, err
 	}
+	if minimized, err := isIconic(hwnd); err == nil && minimized {
+		return normalBoundsFromPlacement(hwnd)
+	}
+	return boundsFromWindowRect(hwnd)
+}
+
+func boundsFromWindowRect(hwnd windows.Handle) (WindowBounds, error) {
 	var windowRect rect
 	ret, _, callErr := procGetWindowRect.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&windowRect)))
 	if ret == 0 {
 		return WindowBounds{}, syscallError("GetWindowRect", callErr)
 	}
+	return rectToBounds(windowRect), nil
+}
+
+func normalBoundsFromPlacement(hwnd windows.Handle) (WindowBounds, error) {
+	placement := windowPlacement{Length: uint32(unsafe.Sizeof(windowPlacement{}))}
+	ret, _, callErr := procGetWindowPlacement.Call(
+		uintptr(hwnd),
+		uintptr(unsafe.Pointer(&placement)),
+	)
+	if ret == 0 {
+		return WindowBounds{}, syscallError("GetWindowPlacement", callErr)
+	}
+	return rectToBounds(placement.RcNormalPosition), nil
+}
+
+func rectToBounds(windowRect rect) WindowBounds {
 	return WindowBounds{
 		X:      int(windowRect.Left),
 		Y:      int(windowRect.Top),
 		Width:  int(windowRect.Right - windowRect.Left),
 		Height: int(windowRect.Bottom - windowRect.Top),
-	}, nil
+	}
+}
+
+func isIconic(hwnd windows.Handle) (bool, error) {
+	ret, _, callErr := procIsIconic.Call(uintptr(hwnd))
+	if ret == 0 && callErr != nil && callErr != windows.ERROR_SUCCESS {
+		return false, syscallError("IsIconic", callErr)
+	}
+	return ret != 0, nil
 }
 
 // SetMainWindowBounds 以绝对屏幕坐标设置主窗口尺寸与位置。
@@ -84,12 +141,20 @@ func SetMainWindowBounds(title string, bounds WindowBounds) error {
 	return nil
 }
 
+const minSavedWindowWidth = 320
+const minSavedWindowHeight = 240
+
+// ValidWindowBounds 判断窗口尺寸是否可用于保存/恢复。
+func ValidWindowBounds(bounds WindowBounds) bool {
+	return bounds.Width >= minSavedWindowWidth && bounds.Height >= minSavedWindowHeight
+}
+
 // ClampWindowBounds 修正窗口尺寸与位置，确保窗口完整落在可用工作区内。
 func ClampWindowBounds(bounds WindowBounds, fallbackWidth, fallbackHeight int) WindowBounds {
-	if bounds.Width <= 0 {
+	if bounds.Width < minSavedWindowWidth {
 		bounds.Width = fallbackWidth
 	}
-	if bounds.Height <= 0 {
+	if bounds.Height < minSavedWindowHeight {
 		bounds.Height = fallbackHeight
 	}
 

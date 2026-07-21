@@ -29,6 +29,7 @@ function choose(item) {
 </script>
 
 <template>
+  <Teleport to="body">
   <BaseModal v-if="dialogState.visible" :title="dialogState.title" width="380px" @close="cancel">
     <p v-if="dialogState.message" class="msg">{{ dialogState.message }}</p>
 
@@ -53,15 +54,15 @@ function choose(item) {
     </div>
 
     <template #footer>
-      <button v-if="dialogState.type !== 'select'" class="btn" @click="cancel">
-        {{ dialogState.type === 'alert' ? '关闭' : '取消' }}
-      </button>
+      <button v-if="dialogState.type === 'alert'" class="btn primary" @click="ok">确定</button>
+      <button v-else-if="dialogState.type !== 'select'" class="btn" @click="cancel">取消</button>
       <button v-if="dialogState.type === 'prompt' || dialogState.type === 'confirm'" class="btn primary" @click="ok">
         确定
       </button>
       <button v-if="dialogState.type === 'select'" class="btn" @click="cancel">取消</button>
     </template>
   </BaseModal>
+  </Teleport>
 </template>
 
 <style scoped>

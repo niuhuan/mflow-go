@@ -62,6 +62,9 @@ func (a *App) restoreWindowState() {
 		Height: state.Height,
 	}
 	bounds = sysutil.ClampWindowBounds(bounds, defaultWindowWidth, defaultWindowHeight)
+
+	runtime.WindowUnminimise(a.ctx)
+
 	if err := sysutil.SetMainWindowBounds(appTitle, bounds); err == nil {
 		if state.Fullscreen {
 			runtime.WindowFullscreen(a.ctx)
@@ -87,7 +90,10 @@ func (a *App) saveWindowState() {
 	state.Fullscreen = fullscreen
 
 	if !fullscreen {
-		if bounds, err := sysutil.GetMainWindowBounds(appTitle); err == nil {
+		minimized, minErr := sysutil.IsMainWindowMinimized(appTitle)
+		if minErr == nil && minimized {
+			// 最小化状态下 GetWindowRect 可能返回无效尺寸，保留上次正常态记录。
+		} else if bounds, err := sysutil.GetMainWindowBounds(appTitle); err == nil && sysutil.ValidWindowBounds(bounds) {
 			state.X = bounds.X
 			state.Y = bounds.Y
 			state.Width = bounds.Width
@@ -95,20 +101,23 @@ func (a *App) saveWindowState() {
 		} else {
 			x, y := runtime.WindowGetPosition(a.ctx)
 			width, height := runtime.WindowGetSize(a.ctx)
-			state.X = x
-			state.Y = y
-			state.Width = width
-			state.Height = height
+			bounds := sysutil.WindowBounds{X: x, Y: y, Width: width, Height: height}
+			if sysutil.ValidWindowBounds(bounds) {
+				state.X = x
+				state.Y = y
+				state.Width = width
+				state.Height = height
+			}
 		}
 	} else if !ok {
 		state = config.DefaultWindowState()
 		state.Fullscreen = true
 	}
 
-	if state.Width <= 0 {
+	if state.Width < 320 {
 		state.Width = defaultWindowWidth
 	}
-	if state.Height <= 0 {
+	if state.Height < 240 {
 		state.Height = defaultWindowHeight
 	}
 

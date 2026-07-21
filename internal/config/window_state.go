@@ -45,10 +45,10 @@ func LoadWindowState() (state WindowState, ok bool, err error) {
 	if err := json.Unmarshal(data, &state); err != nil {
 		return DefaultWindowState(), false, err
 	}
-	if state.Width <= 0 {
+	if state.Width < 320 {
 		state.Width = defaultWindowWidth
 	}
-	if state.Height <= 0 {
+	if state.Height < 240 {
 		state.Height = defaultWindowHeight
 	}
 	return state, true, nil
